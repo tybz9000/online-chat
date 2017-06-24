@@ -1,0 +1,151 @@
+#服务器端
+import socket#导入socket网络传输包
+import os#导入系统包
+import time#导入时间包
+
+global ab#定义全局变量ab用于文件夹
+ab=os.path.dirname(__file__)+'\\files\\'#定义文件夹######？？？？？？？
+addrl=[]#定义地址列表
+name=[]#定义昵称列表
+serverdk= socket.socket(socket.AF_INET,socket.SOCK_DGRAM,0)#udp服务器端连接建立
+dk=int(input("请输入端口号："))#要求用户输入端口号
+serverdk.bind(('192.168.252.1',dk))#绑定ip值######！！！！！！！！
+ip=socket.gethostname()#？？？？？？？？
+print('服务器已就绪.......')#提示
+x=0
+a=0#x与a是用户数量的相关量，x是现在用户数目
+i=0
+m=1#有一个人就可以群聊了
+while(x<=a):#循环
+    data,addr=serverdk.recvfrom(4096)#接受一个请求，建立群聊
+    data=data.decode()#信息解码
+    if(data=="idliketoconnecttheserver"):#基础命令，加入群聊
+        data2,addr=serverdk.recvfrom(4096)#再接受一个信息
+        data2=data2.decode()#解码
+        addrl.append(addr)#存储想加入群聊的人的地址
+        name.append(data2)#姓名列表添加之
+        print(addrl)#有人链接，刷新地址列表显示之
+        msg='系统：'+'^'+name[x]+"加入群聊\n"#系统广播。某某加入群聊
+        k=x
+        while(k>=0):
+            serverdk.sendto(msg.encode(),addrl[k])
+            k-=1#遍历列表，将系统广播发给每个人
+        x+=1
+msg='开始聊天吧\n'#聊天建立，开始聊天
+x=0#？？？？？？
+while(x<=a):
+    serverdk.sendto(msg.encode(),addrl[x])
+    x+=1
+x=0
+while(x<=a):
+    msg=''
+    while(i<=a):
+        msg=msg+name[i]+'\n'#信息整合
+        i+=1#计数加1
+    serverdk.sendto(msg.encode(),addrl[x])#发送给每一个人
+    x+=1
+    i=0
+while True:#挂起循环
+    data,addr=serverdk.recvfrom(4096)#随时接受地址
+    data=data.decode()#解码
+    if data=='Iwanttosendsomething':#秘钥识别
+        data,addr=serverdk.recvfrom(4096)#接受地址和目标端的地址
+        data=int(data.decode())#解密
+        hostt=open('s.txt','w')#写入文件传参
+        hostt.write(str(ip)+' '+str(dk+1))#写入ip和地址
+        hostt.close()#关闭程序
+        os.startfile('file1s.pyw')#打开tcp传输服务器
+        serverdk.sendto('ok'.encode(),addr)#发送可以传的密令
+        time.sleep(0.1)
+        serverdk.sendto("sbwanttosendyouafile".encode(),addrl[data])#告诉目标端有人要给你传文件
+    elif(data=='iwanttochangemyname'):#识别密令
+        data1,addr=serverdk.recvfrom(4096)#接受地址
+        data1=data1.decode()#解密
+        x=0
+        while(x<=a):
+            if(addr==addrl[x]):
+                data2='系统：'+'^'+name[x]+'更名为'+data1+'\n'#进行改名并广播
+                name[x]=data1#服务器端存储各用户昵称
+                break
+            x+=1
+        msg='开始聊天吧\n'#正常聊天过程
+        x=0
+        while(x<=a):#广播
+            serverdk.sendto(msg.encode(),addrl[x])
+            x+=1
+        x=0
+        while(x<=a):
+            msg=''
+            while(i<=a):
+                msg=msg+name[i]+'\n'
+                i+=1
+            serverdk.sendto(msg.encode(),addrl[x])
+            x+=1
+            i=0
+        x=0
+        while(x<=a):
+            serverdk.sendto(data2.encode(),addrl[x])
+            x+=1
+    elif(data=="idliketoconnecttheserver"):#识别秘钥，有人要加入群聊
+        data2,addr=serverdk.recvfrom(4096)#接受地址
+        data2=data2.decode()#解密
+        a+=1
+        addrl.append(addr)#地址列表添加
+        name.append(data2)#昵称列表添加
+        print(addrl)#显示目前在线的地址列表
+        msg='系统：'+'^'+name[a]+"加入群聊\n"#系统广播
+        k=a
+        while(k>=0):
+            serverdk.sendto(msg.encode(),addrl[k])
+            k-=1
+        msg='开始聊天吧\n'
+        x=0
+        while(x<=a):
+            serverdk.sendto(msg.encode(),addrl[x])
+            x+=1
+        x=0
+        while(x<=a):
+            msg=''
+            while(i<=a):
+                msg=msg+name[i]+'\n'
+                i+=1
+            serverdk.sendto(msg.encode(),addrl[x])
+            x+=1
+            i=0
+    elif(data=='iwanttoleave'):#某人离开密令
+        x=0
+        while(x<=a):
+            if(addr==addrl[x]):
+                data2='系统：'+'^'+name[x]+'退出群聊\n'#识别并进行广播
+                del name[x]#列表对应删除
+                del addrl[x]
+                a-=1
+                break
+            x+=1
+        print(addrl)#打印地址列表
+        x=0
+        while(x<=a):
+            serverdk.sendto(data2.encode(),addrl[x])#广播
+            x+=1
+        x=0
+        i=0
+        while(x<=a):
+            msg='开始聊天吧\n'
+            serverdk.sendto(msg.encode(),addrl[x])
+            msg=''
+            while(i<=a):
+                msg=msg+name[i]+'\n'
+                i+=1
+            serverdk.sendto(msg.encode(),addrl[x])
+            x+=1
+            i=0
+        m=1
+    else:
+        newstr=time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
+        data=data.replace('hereisthetime\n',newstr,1) 
+        x=0
+        while(x<=a):
+            serverdk.sendto(data.encode(),addrl[x])
+            x+=1
+connection.close()
+    
